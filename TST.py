@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
 import math
+import json
 
 
 from streamlit_login_auth_ui.widgets import __login__ 
@@ -13,9 +14,23 @@ def Login():
                         hide_footer_bool = False, 
                         lottie_url = 'https://assets2.lottiefiles.com/packages/lf20_jcikwtux.json')
     LOGGED_IN = __login__obj.build_login_ui()
-    email = __login__obj.get_email()
-    if email=="manager@tn-smart-tech.com":
-        return True
+    if LOGGED_IN:
+        usernam = __login__obj.cookies['__streamlit_login_signup_ui_username__']
+        with open('_secret_auth_.json', 'r') as f:
+            usersFromSecret = json.load(f)
+        index = None
+        for i in range(len(usersFromSecret)):
+            if usersFromSecret[i]['username'] == st.session_state["user_name"]:
+                index = i
+                break
+        if index is None:
+            email= None
+        else:
+            email = usersFromSecret[index]['email']
+        if email=="manager@tn-smart-tech.com":
+            return True
+        else:
+            return False
     else:
         return False
 def twoConsecutiveDates(day1: str, day2: str):
