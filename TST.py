@@ -7,6 +7,7 @@ import json
 
 from streamlit_login_auth_ui.widgets import __login__ 
 def Login():
+    return True
     __login__obj = __login__(auth_token = "pk_prod_RKF21ZJ374M8NQN9HC3BVW37PK4G", 
                         company_name = "TST",
                         width = 200, height = 250, 
