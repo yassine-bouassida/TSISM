@@ -42,6 +42,17 @@ def twoConsecutiveDates(day1: str, day2: str):
             return True
     #add more cases (end of month, end of year)
     return False
+def isGraded(mmsi, date):
+    df = pd.read_csv('grades.csv', sep=',',header =0, index_col=False)
+    grades= df[(df['mmsi']==mmsi) & (df['date']==date)]
+    if len(grades)>0:
+        return True
+    else:
+        return False
+def lastLineInGrades():
+    df = pd.read_csv('grades.csv', sep=',',header =0, index_col=False)
+    return df.iloc[-1]
+
 if Login():
     if "mmsi" not in st.session_state:
         st.session_state.mmsi = None
@@ -53,23 +64,28 @@ if Login():
         st.session_state.dateIndex = None
     if "data" not in st.session_state:
         st.session_state.data = []
+    if "Navigations" not in st.session_state:
+        st.session_state.Navigations = None
 
 
 
             
+    if st.session_state.Navigations is None:
+        df = pd.read_csv('aisQuery.csv', sep=',',header =0, index_col=False)
+        Navigation= df[["mmsi", "dateAis", "timeAis", "lon", "lat"]]
 
-    df = pd.read_csv('aisQuery.csv', sep=',',header =0, index_col=False)
-    Navigation= df[["mmsi", "dateAis", "timeAis", "lon", "lat"]]
+        #clean data
+        thresh_min= 0.01
+        thresh_max= 0.99
+        LAT_min= Navigation['lat'].quantile(thresh_min)
+        LAT_max= Navigation['lat'].quantile(thresh_max)
+        LON_min= Navigation['lon'].quantile(thresh_min)
+        LON_max= Navigation['lon'].quantile(thresh_max)
+        Navigation= Navigation[(Navigation['lat']<LAT_max) & (Navigation['lat']>LAT_min)]
+        Navigation= Navigation[(Navigation['lon']<LON_max) & (Navigation['lon']>LON_min)]
+        st.session_state.Navigations = Navigation
+    Navigation = st.session_state.Navigations
 
-    #clean data
-    thresh_min= 0.01
-    thresh_max= 0.99
-    LAT_min= Navigation['lat'].quantile(thresh_min)
-    LAT_max= Navigation['lat'].quantile(thresh_max)
-    LON_min= Navigation['lon'].quantile(thresh_min)
-    LON_max= Navigation['lon'].quantile(thresh_max)
-    Navigation= Navigation[(Navigation['lat']<LAT_max) & (Navigation['lat']>LAT_min)]
-    Navigation= Navigation[(Navigation['lon']<LON_max) & (Navigation['lon']>LON_min)]
 
 
     #select the mmsi from the list
@@ -79,6 +95,12 @@ if Login():
         mmsi = Navigation["mmsi"].unique()[0]
         st.session_state.mmsi = mmsi
         st.session_state.mmsiIndex = 0
+        #if grades.csv is not empty, take the last mmsi from the list
+        if not pd.read_csv('grades.csv', sep=',',header =0, index_col=False).empty:
+            mmsi = lastLineInGrades()["mmsi"]
+            st.session_state.mmsi = mmsi
+            st.session_state.mmsiIndex = list(Navigation["mmsi"].unique()).index(mmsi)
+
     else:
         mmsiIndex = st.session_state.mmsiIndex
         mmsi= Navigation["mmsi"].unique()[mmsiIndex]
@@ -123,9 +145,14 @@ if Login():
     #date = st.sidebar.selectbox("Select a date", ["all"] + dates)
 
     if st.session_state.date is None:
-        #take the first date from the list
         st.session_state.date = dates[0]
         st.session_state.dateIndex = 0
+        for i in range(len(dates)):
+            if isGraded(mmsi, dates[i]):
+                st.session_state.date = dates[i]
+                st.session_state.dateIndex = i
+            else:
+                break
     else:
         dateIndex = st.session_state.dateIndex
         if dateIndex >= len(dates)-1:
@@ -185,6 +212,12 @@ if Login():
         st.button(grades[3], on_click=grade, args=(mmsi,date,dateIndex,4))
     with b5:
         st.button(grades[4], on_click=grade, args=(mmsi,date,dateIndex,5))
+    
+    #download grades.csv
+    def download():
+        df = pd.read_csv('grades.csv', sep=',',header =0, index_col=False)
+        st.download_button(label="Download grades.csv", data=df.to_csv(index=False), file_name='grades.csv', mime='text/csv')
+    download()
 
 
 
