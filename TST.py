@@ -152,6 +152,8 @@ if Login():
                 st.session_state.date = dates[i]
                 st.session_state.dateIndex = i
             else:
+                st.session_state.date = dates[i]
+                st.session_state.dateIndex = i                
                 break
     else:
         dateIndex = st.session_state.dateIndex
